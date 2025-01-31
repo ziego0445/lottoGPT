@@ -425,6 +425,10 @@ export default function Home() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      <footer className="text-center text-sm text-gray-400 mt-8">
+        © 2025 LottoGPT 본 서비스는 참고용이며, 실제 당첨을 보장하지 않습니다.
+      </footer>
     </main>
   )
 }
