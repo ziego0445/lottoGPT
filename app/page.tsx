@@ -309,7 +309,10 @@ export default function Home() {
         <h1 className="text-5xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-400 mb-2">
           LottoGPT
         </h1>
-        <p className="text-xl text-center text-blue-200 mb-12">AI 기반 로또 번호 생성기</p>
+        <p className="text-xl text-center text-blue-200 mb-2">AI 기반 로또 번호 생성기</p>
+        <p className="text-sm text-center text-blue-300/80 mb-12">
+          최근 200회의 당첨번호를 기반으로 학습하여 최적의 로또번호를 예측합니다.
+        </p>
 
         <motion.div
           className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-8 mb-12"
@@ -368,11 +371,11 @@ export default function Home() {
               className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-8"
             >
               <h2 className="text-3xl font-bold text-blue-300 mb-6">예측 이력</h2>
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {predictionHistory.map((history) => (
                   <motion.div
                     key={history.id}
-                    className="border-b border-blue-800 pb-6 last:border-b-0 last:pb-0"
+                    className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl p-6"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3 }}
@@ -383,16 +386,14 @@ export default function Home() {
                         학습 데이터: {history.trainingSize}회차
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-4">
                       {history.numbers.map((set, setIndex) => (
-                        <motion.div
+                        <div
                           key={setIndex}
-                          className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-lg p-4 shadow-inner"
-                          whileHover={{ scale: 1.05 }}
-                          transition={{ type: "spring", stiffness: 300 }}
+                          className="flex items-center space-x-4 p-4 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg"
                         >
-                          <span className="block text-sm font-medium text-blue-300 mb-2">SET {setIndex + 1}</span>
-                          <div className="flex flex-wrap gap-2">
+                          <span className="text-sm font-medium text-blue-300 w-20">SET {setIndex + 1}</span>
+                          <div className="flex space-x-2">
                             {set.map((num) => (
                               <motion.span
                                 key={num}
@@ -407,14 +408,14 @@ export default function Home() {
                                           ? "bg-gradient-to-r from-green-400 to-green-600 text-white"
                                           : "bg-gradient-to-r from-purple-400 to-purple-600 text-white"
                                 }`}
-                                whileHover={{ scale: 1.1, rotate: 360 }}
+                                whileHover={{ scale: 1.1 }}
                                 transition={{ type: "spring", stiffness: 300 }}
                               >
                                 {num}
                               </motion.span>
                             ))}
                           </div>
-                        </motion.div>
+                        </div>
                       ))}
                     </div>
                   </motion.div>
