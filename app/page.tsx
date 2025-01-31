@@ -302,6 +302,8 @@ export default function Home() {
         transition={{ duration: 0.5 }}
         className="max-w-4xl mx-auto"
       >
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4859745494345842"
+     crossOrigin="anonymous"></script>
         <h1 className="text-5xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-400 mb-2">
           LottoGPT
         </h1>
