@@ -393,7 +393,7 @@ export default function Home() {
                           className="flex items-center space-x-4 p-4 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg"
                         >
                           <span className="text-sm font-medium text-blue-300 w-20">SET {setIndex + 1}</span>
-                          <div className="flex space-x-2">
+                          <div className="numbers">
                             {set.map((num) => (
                               <motion.span
                                 key={num}
