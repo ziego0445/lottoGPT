@@ -21,6 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+       <head>
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4859745494345842"
+     crossOrigin="anonymous"></script>
+        </head>
       <body className={orbitron.className}>{children}</body>
     </html>
   )

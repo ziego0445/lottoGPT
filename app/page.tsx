@@ -6,6 +6,8 @@ import * as XLSX from 'xlsx'
 import * as math from 'mathjs'
 import { v4 as uuidv4 } from "uuid"
 import { motion, AnimatePresence } from "framer-motion"
+import Script from 'next/script';
+
 interface LottoHistory {
   round: number;
   date: string;
@@ -302,7 +304,7 @@ export default function Home() {
         transition={{ duration: 0.5 }}
         className="max-w-4xl mx-auto"
       >
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4859745494345842"
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4859745494345842"
      crossOrigin="anonymous"></script>
         <h1 className="text-5xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-400 mb-2">
           LottoGPT
