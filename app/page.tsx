@@ -442,6 +442,12 @@ export default function Home() {
     }
   }, [historicalData]);
 
+  // clearPredictionHistory 함수 추가
+  const clearPredictionHistory = () => {
+    setPredictionHistory([]);
+    localStorage.removeItem('predictionHistory');
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 py-12 px-4 sm:px-6 lg:px-8 text-white">
       <motion.div
@@ -451,12 +457,14 @@ export default function Home() {
         className="max-w-4xl mx-auto"
       >
 
-        <h1 className="text-5xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-400 mb-2">
+        <h1 className="text-5xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-400 mb-2 whitespace-nowrap">
           LottoGPT
         </h1>
-        <p className="text-xl text-center text-blue-200 mb-2">AI 기반 로또 번호 생성기</p>
-        <p className="text-sm text-center text-blue-300/80 mb-12">
-          최근 200회의 당첨번호를 기반으로 학습하여 최적의 로또번호를 예측합니다.
+        <p className="text-xl text-center text-blue-200 mb-2 whitespace-nowrap">
+          AI 기반 로또 번호 생성기
+        </p>
+        <p className="text-sm text-center text-blue-300/80 mb-12 whitespace-normal">
+          최근 500회의 당첨번호를 기반으로 학습하여 최적의 로또번호를 예측합니다.
         </p>
 
         <motion.div
@@ -466,13 +474,15 @@ export default function Home() {
         >
           <div className="mb-6">
             <div className="mb-4">
-              <h3 className="text-lg font-semibold text-blue-200 mb-2">AI 학습 데이터 설정</h3>
-              <p className="text-sm text-blue-300/80">
+              <h3 className="text-lg font-semibold text-blue-200 mb-2 whitespace-nowrap">
+                AI 학습 데이터 설정
+              </h3>
+              <p className="text-sm text-blue-300/80 whitespace-normal">
                 기존 당첨번호를 AI에게 학습시키는 데이터양을 선택합니다. 데이터가 많을수록 더 많은 패턴을 학습할 수 있습니다.
               </p>
             </div>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-medium text-blue-200">
+              <label className="text-sm font-medium text-blue-200 whitespace-nowrap">
                 학습 데이터 크기: {maxTrainingSize}회차
               </label>
             </div>
@@ -485,8 +495,8 @@ export default function Home() {
               className="w-full h-2 bg-blue-900 rounded-lg appearance-none cursor-pointer accent-blue-500"
             />
             <div className="flex justify-between text-xs text-blue-300 mt-1">
-              <span>최소 30회차</span>
-              <span>최대 200회차</span>
+              <span className="whitespace-nowrap">최소 30회차</span>
+              <span className="whitespace-nowrap">최대 200회차</span>
             </div>
           </div>
 
@@ -579,7 +589,29 @@ export default function Home() {
               exit={{ opacity: 0, y: -20 }}
               className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-8"
             >
-              <h2 className="text-3xl font-bold text-blue-300 mb-6">예측 이력</h2>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-blue-300">예측 이력</h2>
+                <button
+                  onClick={clearPredictionHistory}
+                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-colors duration-200 flex items-center gap-2 text-sm"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-4 w-4" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                    />
+                  </svg>
+                  초기화
+                </button>
+              </div>
               <div className="space-y-6">
                 {predictionHistory.map((history) => (
                   <motion.div
@@ -629,7 +661,7 @@ export default function Home() {
                     </div>
                   </motion.div>
                 ))}
-              </div>
+        </div>
             </motion.div>
           )}
         </AnimatePresence>
