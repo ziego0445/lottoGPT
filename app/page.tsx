@@ -7,6 +7,8 @@ import * as math from 'mathjs'
 import { v4 as uuidv4 } from "uuid"
 import { motion, AnimatePresence } from "framer-motion"
 import Script from 'next/script';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface LottoHistory {
   round: number;
@@ -46,6 +48,14 @@ interface PredictionHistoryItem {
   trainingSize: number;
 }
 
+// 통계를 위한 인터페이스 추가
+interface LottoStats {
+  frequency: { [key: number]: number };
+  oddEvenRatio: { odd: number; even: number };
+  sumStats: { min: number; max: number; avg: number };
+  consecutiveNumbers: number;
+}
+
 export default function Home() {
   const [lottoNumbers, setLottoNumbers] = useState<number[][]>([])
   const [historicalData, setHistoricalData] = useState<LottoHistory[]>([])
@@ -53,10 +63,38 @@ export default function Home() {
   const [trainingSize, setTrainingSize] = useState<number>(0)
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
   const [predictionHistory, setPredictionHistory] = useState<PredictionHistoryItem[]>([]);
+  const [lottoStats, setLottoStats] = useState<LottoStats | null>(null);
+  const [maxTrainingSize, setMaxTrainingSize] = useState<number>(50);
 
   useEffect(() => {
     loadLottoHistory()
   }, [])
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('predictionHistory');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.every(item => 
+          item.id && 
+          item.date && 
+          Array.isArray(item.numbers) && 
+          typeof item.trainingSize === 'number'
+        )) {
+          setPredictionHistory(parsed);
+        }
+      }
+    } catch (error) {
+      console.error('예측 이력 로드 중 오류 발생:', error);
+      localStorage.removeItem('predictionHistory');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (predictionHistory.length > 0) {
+      localStorage.setItem('predictionHistory', JSON.stringify(predictionHistory.slice(0, 5)));
+    }
+  }, [predictionHistory]);
 
   const loadLottoHistory = async () => {
     try {
@@ -242,35 +280,50 @@ export default function Home() {
         detail: '1번째 세트 준비 중...'
       });
       
-      const newNumbers: number[][] = []
-      let totalTrainingSize = 0  // 전체 학습 데이터 크기를 추적
+      const newNumbers: number[][] = [];
+      let totalTrainingSize = 0;
+      const predictionId = Date.now(); // 모든 세트가 같은 예측 ID를 공유
 
       for (let set = 0; set < 5; set++) {
-        const randomSize = Math.floor(Math.random() * (200 - 50 + 1)) + 50
-        totalTrainingSize += randomSize  // 각 세트의 학습 데이터 크기를 누적
+        const randomSize = Math.floor(Math.random() * (maxTrainingSize - 30 + 1)) + 30;
+        totalTrainingSize += randomSize;
 
-        // 학습 데이터의 시작 위치도 랜덤하게 선택
-        const startIdx = Math.floor(Math.random() * (historicalData.length - randomSize))
-        const trainingData = historicalData.slice(startIdx, startIdx + randomSize)
+        const startIdx = Math.floor(Math.random() * (historicalData.length - randomSize));
+        const trainingData = historicalData.slice(startIdx, startIdx + randomSize);
         
-        const models = await trainLogisticRegressionForSet(trainingData, set + 1)
+        const models = await trainLogisticRegressionForSet(trainingData, set + 1);
 
-        // 번호 생성 로직
-        const lastGame = trainingData[0]
-        const features = new Array(45).fill(0)
-        lastGame.numbers.forEach(num => features[num - 1] = 1)
+        const lastGame = trainingData[0];
+        const features = new Array(45).fill(0);
+        lastGame.numbers.forEach(num => features[num - 1] = 1);
 
         const probabilities = models.map((model, index) => {
-          const z = math.sum(math.dotMultiply(features, model.weights)) + model.bias
-          const probability = 1 / (1 + Math.exp(-z))
-          return { number: index + 1, probability }
-        })
+          const z = math.sum(math.dotMultiply(features, model.weights)) + model.bias;
+          const probability = 1 / (1 + Math.exp(-z));
+          return { number: index + 1, probability };
+        });
 
-        probabilities.sort((a, b) => b.probability - a.probability)
-        const numbers = probabilities.slice(0, 6).map(p => p.number).sort((a, b) => a - b)
-        newNumbers.push(numbers)
+        probabilities.sort((a, b) => b.probability - a.probability);
+        const numbers = probabilities.slice(0, 6).map(p => p.number).sort((a, b) => a - b);
+        newNumbers.push(numbers);
 
-        if (set < 4) { // 마지막 세트가 아닌 경우에만 다음 세트 준비 메시지 표시
+        // 각 세트가 완료될 때마다 예측 이력 업데이트
+        const currentPrediction: PredictionHistoryItem = {
+          id: predictionId,
+          date: new Date().toLocaleString('ko-KR'),
+          numbers: newNumbers.slice(), // 현재까지의 모든 세트 복사
+          trainingSize: Math.floor(totalTrainingSize / (set + 1)) // 현재까지의 평균 학습 크기
+        };
+
+        // 이전 예측을 제거하고 새로운 예측으로 업데이트
+        setPredictionHistory(prev => {
+          const filtered = prev.filter(p => p.id !== predictionId);
+          const newHistory = [currentPrediction, ...filtered].slice(0, 5); // 최대 5개만 유지
+          localStorage.setItem('predictionHistory', JSON.stringify(newHistory));
+          return newHistory;
+        });
+
+        if (set < 4) {
           setProgress({
             stage: '번호 생성',
             current: 0,
@@ -280,22 +333,73 @@ export default function Home() {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
-      
-      // 예측 이력 저장 시 평균 학습 크기 사용
-      const newPrediction: PredictionHistoryItem = {
-        id: Date.now(),
-        date: new Date().toLocaleString('ko-KR'),
-        numbers: newNumbers,
-        trainingSize: Math.floor(totalTrainingSize / 5)  // 평균 학습 크기 계산
-      }
 
-      setPredictionHistory([newPrediction, ...predictionHistory])
-      setProgress(null)
+      setProgress(null);
     } catch (error) {
-      console.error('번호 생성 중 오류 발생:', error)
-      setProgress(null)
+      console.error('번호 생성 중 오류 발생:', error);
+      setProgress(null);
     }
-  }
+  };
+
+  // 통계 계산 함수 추가
+  const calculateStats = (data: LottoHistory[]) => {
+    const frequency: { [key: number]: number } = {};
+    let oddCount = 0;
+    let evenCount = 0;
+    let totalSum = 0;
+    let minSum = Infinity;
+    let maxSum = 0;
+    let consecutiveCount = 0;
+
+    // 1-45까지 초기화
+    for (let i = 1; i <= 45; i++) {
+      frequency[i] = 0;
+    }
+
+    data.forEach(history => {
+      // 빈도수 계산
+      history.numbers.forEach(num => {
+        frequency[num]++;
+        if (num % 2 === 0) evenCount++;
+        else oddCount++;
+      });
+
+      // 합계 통계
+      const sum = history.numbers.reduce((a, b) => a + b, 0);
+      totalSum += sum;
+      minSum = Math.min(minSum, sum);
+      maxSum = Math.max(maxSum, sum);
+
+      // 연속된 숫자 확인
+      const sortedNumbers = [...history.numbers].sort((a, b) => a - b);
+      for (let i = 0; i < sortedNumbers.length - 1; i++) {
+        if (sortedNumbers[i + 1] - sortedNumbers[i] === 1) {
+          consecutiveCount++;
+        }
+      }
+    });
+
+    setLottoStats({
+      frequency,
+      oddEvenRatio: {
+        odd: (oddCount / (oddCount + evenCount)) * 100,
+        even: (evenCount / (oddCount + evenCount)) * 100
+      },
+      sumStats: {
+        min: minSum,
+        max: maxSum,
+        avg: Math.round(totalSum / data.length)
+      },
+      consecutiveNumbers: consecutiveCount
+    });
+  };
+
+  useEffect(() => {
+    if (historicalData.length > 0) {
+      calculateStats(historicalData);
+    }
+  }, [historicalData]);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 py-12 px-4 sm:px-6 lg:px-8 text-white">
       <motion.div
@@ -318,6 +422,32 @@ export default function Home() {
           whileHover={{ scale: 1.02 }}
           transition={{ type: "spring", stiffness: 300 }}
         >
+          <div className="mb-6">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-blue-200 mb-2">AI 학습 데이터 설정</h3>
+              <p className="text-sm text-blue-300/80">
+                기존 당첨번호를 AI에게 학습시키는 데이터양을 선택합니다. 데이터가 많을수록 더 많은 패턴을 학습할 수 있습니다.
+              </p>
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-blue-200">
+                학습 데이터 크기: {maxTrainingSize}회차
+              </label>
+            </div>
+            <input
+              type="range"
+              min="30"
+              max="200"
+              value={maxTrainingSize}
+              onChange={(e) => setMaxTrainingSize(Number(e.target.value))}
+              className="w-full h-2 bg-blue-900 rounded-lg appearance-none cursor-pointer accent-blue-500"
+            />
+            <div className="flex justify-between text-xs text-blue-300 mt-1">
+              <span>최소 30회차</span>
+              <span>최대 200회차</span>
+            </div>
+          </div>
+
           <button
             onClick={generateNumbers}
             className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 shadow-lg"
@@ -349,6 +479,44 @@ export default function Home() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
               <h3 className="text-lg font-semibold text-blue-300 mb-2">{progress.stage}</h3>
               <p className="text-sm text-blue-200 mb-2">{progress.detail}</p>
+              
+              {/* 로딩 애니메이션 수정 */}
+              <div className="flex justify-center mb-4">
+                <div className="flex gap-2">
+                  {[...Array(6)].map((_, index) => {
+                    const randomNum = Math.floor(Math.random() * 45) + 1;
+                    return (
+                      <motion.div
+                        key={index}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                          randomNum <= 10
+                            ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
+                            : randomNum <= 20
+                              ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white"
+                              : randomNum <= 30
+                                ? "bg-gradient-to-r from-red-400 to-red-600 text-white"
+                                : randomNum <= 40
+                                  ? "bg-gradient-to-r from-green-400 to-green-600 text-white"
+                                  : "bg-gradient-to-r from-purple-400 to-purple-600 text-white"
+                        }`}
+                        animate={{
+                          rotate: [0, 360],
+                          scale: [1, 1.1, 1],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          delay: index * 0.2,
+                          ease: "linear"
+                        }}
+                      >
+                        {randomNum}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="w-full bg-blue-900 rounded-full h-2.5 overflow-hidden">
                 <motion.div
                   className="bg-gradient-to-r from-blue-400 to-purple-500 h-2.5"
@@ -356,7 +524,7 @@ export default function Home() {
                   animate={{ width: `${(progress.current / progress.total) * 100}%` }}
                   transition={{ duration: 0.5 }}
                 ></motion.div>
-        </div>
+              </div>
             </motion.div>
           )}
         </motion.div>
@@ -392,11 +560,11 @@ export default function Home() {
                           className="flex items-center space-x-4 p-4 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg"
                         >
                           <span className="text-sm font-medium text-blue-300 w-20">SET {setIndex + 1}</span>
-                          <div className="numbers">
+                          <div className="flex flex-wrap gap-3 justify-center">
                             {set.map((num) => (
                               <motion.span
                                 key={num}
-                                className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold ${
+                                className={`inline-flex items-center justify-center w-12 h-12 rounded-full text-sm font-bold ${
                                   num <= 10
                                     ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
                                     : num <= 20
@@ -419,11 +587,157 @@ export default function Home() {
                     </div>
                   </motion.div>
                 ))}
-              </div>
+        </div>
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* 통계 섹션 추가 */}
+      {lottoStats && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-4xl mx-auto mt-12"
+        >
+          <div className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-8">
+            <h2 className="text-3xl font-bold text-blue-300 mb-6">당첨 번호 통계</h2>
+            
+            {/* 빈도수 차트 */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-blue-200 mb-4">번호별 출현 빈도 그래프</h3>
+              <div className="w-full h-[300px] bg-white bg-opacity-5 rounded-xl p-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={Object.entries(lottoStats.frequency).map(([num, freq]) => ({
+                      number: Number(num),
+                      frequency: freq,
+                    }))}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
+                  >
+                    <XAxis
+                      dataKey="number"
+                      stroke="#94a3b8"
+                      tick={{ fill: '#94a3b8' }}
+                      tickLine={{ stroke: '#94a3b8' }}
+                    />
+                    <YAxis
+                      stroke="#94a3b8"
+                      tick={{ fill: '#94a3b8' }}
+                      tickLine={{ stroke: '#94a3b8' }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                    />
+                    <Bar
+                      dataKey="frequency"
+                      fill="url(#colorGradient)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <defs>
+                      <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.8}/>
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* 홀짝 비율을 원형 차트로 표시 */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-blue-200 mb-4">홀짝 비율 분포</h3>
+              <div className="w-full h-[300px] bg-white bg-opacity-5 rounded-xl p-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: '홀수', value: lottoStats.oddEvenRatio.odd },
+                        { name: '짝수', value: lottoStats.oddEvenRatio.even }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      <Cell fill="#60a5fa" />
+                      <Cell fill="#34d399" />
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      content={({ payload }) => (
+                        <div className="flex justify-center gap-4">
+                          {payload?.map((entry, index) => (
+                            <div key={`item-${index}`} className="flex items-center">
+                              <div
+                                className="w-3 h-3 rounded-full mr-2"
+                                style={{ backgroundColor: entry.color }}
+                              />
+                              <span className="text-sm text-blue-200">
+                                {entry.value}: {Math.round(entry.payload.value)}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* 합계 통계 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white bg-opacity-5 rounded-xl p-4">
+                <h3 className="text-lg font-semibold text-blue-200 mb-2">번호 합계</h3>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-sm text-blue-200">최소</div>
+                    <div className="text-xl font-bold text-blue-300">{lottoStats.sumStats.min}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-blue-200">평균</div>
+                    <div className="text-xl font-bold text-blue-300">{lottoStats.sumStats.avg}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-blue-200">최대</div>
+                    <div className="text-xl font-bold text-blue-300">{lottoStats.sumStats.max}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 연속된 숫자 통계 */}
+              <div className="bg-white bg-opacity-5 rounded-xl p-4">
+                <h3 className="text-lg font-semibold text-blue-200 mb-2">연속 번호</h3>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-300">
+                    {lottoStats.consecutiveNumbers}회
+                  </div>
+                  <div className="text-sm text-blue-200">전체 연속 번호 출현</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <footer className="text-center text-sm text-gray-400 mt-8">
         © 2025 LottoGPT 본 서비스는 참고용이며, 실제 당첨을 보장하지 않습니다.
