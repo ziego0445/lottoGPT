@@ -134,22 +134,22 @@
 }
 
 .numbers {
-  display: flex;
-  gap: 0.8rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
   justify-content: center;
   margin: 0 auto;
 }
 
 .number {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: white;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease;

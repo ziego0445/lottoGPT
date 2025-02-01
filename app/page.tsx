@@ -246,7 +246,7 @@ export default function Home() {
       let totalTrainingSize = 0  // 전체 학습 데이터 크기를 추적
 
       for (let set = 0; set < 5; set++) {
-        const randomSize = Math.floor(Math.random() * (200 - 50 + 1)) + 50
+        const randomSize = Math.floor(Math.random() * (80 - 30 + 1)) + 30; // 30~80 사이의 랜덤 크기
         totalTrainingSize += randomSize  // 각 세트의 학습 데이터 크기를 누적
 
         // 학습 데이터의 시작 위치도 랜덤하게 선택
@@ -304,8 +304,7 @@ export default function Home() {
         transition={{ duration: 0.5 }}
         className="max-w-4xl mx-auto"
       >
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4859745494345842"
-     crossOrigin="anonymous"></script>
+
         <h1 className="text-5xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-400 mb-2">
           LottoGPT
         </h1>
@@ -357,7 +356,7 @@ export default function Home() {
                   animate={{ width: `${(progress.current / progress.total) * 100}%` }}
                   transition={{ duration: 0.5 }}
                 ></motion.div>
-              </div>
+        </div>
             </motion.div>
           )}
         </motion.div>
