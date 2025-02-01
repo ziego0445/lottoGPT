@@ -542,29 +542,29 @@ export default function Home() {
                 {predictionHistory.map((history) => (
                   <motion.div
                     key={history.id}
-                    className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl p-6"
+                    className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl p-4"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-center mb-3">
                       <span className="text-sm text-blue-300">{history.date}</span>
                       <span className="text-sm font-medium text-purple-300">
                         학습 데이터: {history.trainingSize}회차
                       </span>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {history.numbers.map((set, setIndex) => (
                         <div
                           key={setIndex}
-                          className="flex items-center space-x-4 p-4 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg"
+                          className="flex flex-col p-3 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg"
                         >
-                          <span className="text-sm font-medium text-blue-300 w-20">SET {setIndex + 1}</span>
-                          <div className="flex flex-wrap gap-3 justify-center">
+                          <span className="text-sm font-medium text-blue-300 mb-2">SET {setIndex + 1}</span>
+                          <div className="flex flex-wrap gap-2 justify-center w-full">
                             {set.map((num) => (
                               <motion.span
                                 key={num}
-                                className={`inline-flex items-center justify-center w-12 h-12 rounded-full text-sm font-bold ${
+                                className={`inline-flex items-center justify-center w-11 h-11 rounded-full text-base font-bold ${
                                   num <= 10
                                     ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
                                     : num <= 20
@@ -587,7 +587,7 @@ export default function Home() {
                     </div>
                   </motion.div>
                 ))}
-        </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
