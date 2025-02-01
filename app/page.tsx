@@ -675,6 +675,13 @@ export default function Home() {
                         borderRadius: '8px',
                         color: '#fff'
                       }}
+                      formatter={(value, name) => {
+                        if (name === 'frequency') {
+                          return [<span style={{ color: '#fff' }}>{`${value}회`}</span>, <span style={{ color: '#fff' }}>출현 횟수</span>];
+                        }
+                        return [value, name];
+                      }}
+                      labelFormatter={(label) => <span style={{ color: '#fff' }}>{`${label}번`}</span>}
                     />
                     <Bar
                       dataKey="frequency"
@@ -727,7 +734,7 @@ export default function Home() {
                         borderRadius: '8px',
                         color: '#fff'
                       }}
-                      formatter={(value) => [`${value}회`, '출현횟수']}
+                      formatter={(value) => [<span style={{ color: '#fff' }}>{`${value}회`}</span>, <span style={{ color: '#fff' }}>출현횟수</span>]}
                     />
                     <Bar
                       dataKey="count"
