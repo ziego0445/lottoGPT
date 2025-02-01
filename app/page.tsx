@@ -54,6 +54,20 @@ interface LottoStats {
   oddEvenRatio: { odd: number; even: number };
   sumStats: { min: number; max: number; avg: number };
   consecutiveNumbers: number;
+  recentTrends: {
+    range1_9: number;
+    range10_19: number;
+    range20_29: number;
+    range30_39: number;
+    range40_45: number;
+  };
+  longTermTrends: {
+    range1_9: number;
+    range10_19: number;
+    range20_29: number;
+    range30_39: number;
+    range40_45: number;
+  };
 }
 
 export default function Home() {
@@ -379,6 +393,26 @@ export default function Home() {
       }
     });
 
+    // 500회 트렌드 분석
+    const longTermGames = data.slice(0, 500);
+    const longTermTrends = {
+      range1_9: 0,
+      range10_19: 0,
+      range20_29: 0,
+      range30_39: 0,
+      range40_45: 0
+    };
+
+    longTermGames.forEach(game => {
+      game.numbers.forEach(num => {
+        if (num <= 9) longTermTrends.range1_9++;
+        else if (num <= 19) longTermTrends.range10_19++;
+        else if (num <= 29) longTermTrends.range20_29++;
+        else if (num <= 39) longTermTrends.range30_39++;
+        else longTermTrends.range40_45++;
+      });
+    });
+
     setLottoStats({
       frequency,
       oddEvenRatio: {
@@ -390,7 +424,15 @@ export default function Home() {
         max: maxSum,
         avg: Math.round(totalSum / data.length)
       },
-      consecutiveNumbers: consecutiveCount
+      consecutiveNumbers: consecutiveCount,
+      recentTrends: {
+        range1_9: 0,
+        range10_19: 0,
+        range20_29: 0,
+        range30_39: 0,
+        range40_45: 0
+      },
+      longTermTrends: longTermTrends
     });
   };
 
@@ -603,7 +645,7 @@ export default function Home() {
           <div className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-8">
             <h2 className="text-3xl font-bold text-blue-300 mb-6">당첨 번호 통계</h2>
             
-            {/* 빈도수 차트 */}
+            {/* 빈도수 차트 수정 */}
             <div className="mb-8">
               <h3 className="text-xl font-semibold text-blue-200 mb-4">번호별 출현 빈도 그래프</h3>
               <div className="w-full h-[300px] bg-white bg-opacity-5 rounded-xl p-4">
@@ -636,17 +678,78 @@ export default function Home() {
                     />
                     <Bar
                       dataKey="frequency"
-                      fill="url(#colorGradient)"
                       radius={[4, 4, 0, 0]}
-                    />
-                    <defs>
-                      <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.8}/>
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                      </linearGradient>
-                    </defs>
+                    >
+                      {Object.entries(lottoStats.frequency).map(([num]) => {
+                        const number = Number(num);
+                        let color;
+                        if (number <= 9) color = "#fbbf24";      // 노란색
+                        else if (number <= 19) color = "#60a5fa"; // 파란색
+                        else if (number <= 29) color = "#ef4444"; // 빨간색
+                        else if (number <= 39) color = "#34d399"; // 초록색
+                        else color = "#a78bfa";                   // 보라색
+                        return <Cell key={`cell-${num}`} fill={color} />;
+                      })}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* 번호대별 출현 빈도 차트 */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-blue-200 mb-4">최근 500회 번호대별 출현 빈도</h3>
+              <div className="w-full h-[300px] bg-white bg-opacity-5 rounded-xl p-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { range: "1-9", count: lottoStats.longTermTrends.range1_9, color: "#fbbf24" },
+                      { range: "10-19", count: lottoStats.longTermTrends.range10_19, color: "#60a5fa" },
+                      { range: "20-29", count: lottoStats.longTermTrends.range20_29, color: "#ef4444" },
+                      { range: "30-39", count: lottoStats.longTermTrends.range30_39, color: "#34d399" },
+                      { range: "40-45", count: lottoStats.longTermTrends.range40_45, color: "#a78bfa" }
+                    ]}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <XAxis
+                      dataKey="range"
+                      stroke="#94a3b8"
+                      tick={{ fill: '#94a3b8' }}
+                    />
+                    <YAxis
+                      stroke="#94a3b8"
+                      tick={{ fill: '#94a3b8' }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                      formatter={(value) => [`${value}회`, '출현횟수']}
+                    />
+                    <Bar
+                      dataKey="count"
+                      radius={[4, 4, 0, 0]}
+                    >
+                      {[
+                        { fill: "#fbbf24" },
+                        { fill: "#60a5fa" },
+                        { fill: "#ef4444" },
+                        { fill: "#34d399" },
+                        { fill: "#a78bfa" }
+                      ].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex justify-center gap-4 mt-4">
+                <span className="text-sm text-blue-200">
+                  * 최근 500회차의 당첨번호를 분석한 결과입니다.
+                </span>
               </div>
             </div>
 
