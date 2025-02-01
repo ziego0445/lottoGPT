@@ -692,7 +692,7 @@ export default function Home() {
                                 style={{ backgroundColor: entry.color }}
                               />
                               <span className="text-sm text-blue-200">
-                                {entry.value}: {Math.round(entry.payload.value)}%
+                                {entry.value}: {entry.payload?.value ? Math.round(entry.payload.value) : 0}%
                               </span>
                             </div>
                           ))}
