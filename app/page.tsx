@@ -450,6 +450,22 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 py-12 px-4 sm:px-6 lg:px-8 text-white">
+      {/* 카카오 광고 추가 */}
+      <div className="max-w-4xl mx-auto mb-8">
+        <ins 
+          className="kakao_ad_area" 
+          style={{ display: "none" }}
+          data-ad-unit="DAN-wRKhfzBFsBR6JQsR"
+          data-ad-width="320"
+          data-ad-height="50"
+        />
+        <Script
+          type="text/javascript"
+          src="//t1.daumcdn.net/kas/static/ba.min.js"
+          async
+        />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -661,7 +677,7 @@ export default function Home() {
                     </div>
                   </motion.div>
                 ))}
-        </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
