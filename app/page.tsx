@@ -246,7 +246,7 @@ export default function Home() {
       let totalTrainingSize = 0  // 전체 학습 데이터 크기를 추적
 
       for (let set = 0; set < 5; set++) {
-        const randomSize = Math.floor(Math.random() * (80 - 30 + 1)) + 30; // 30~80 사이의 랜덤 크기
+        const randomSize = Math.floor(Math.random() * (200 - 50 + 1)) + 50
         totalTrainingSize += randomSize  // 각 세트의 학습 데이터 크기를 누적
 
         // 학습 데이터의 시작 위치도 랜덤하게 선택

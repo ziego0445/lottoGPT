@@ -23,9 +23,16 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4859745494345842" crossOrigin="anonymous"></Script>
+        <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4859745494345842" crossOrigin="anonymous" />
       </head>
-      <body className={orbitron.className}>{children}</body>
+      <body className={orbitron.className}>
+        {children}
+        <ins className="kakao_ad_area" style={{ display: 'none' }}
+          data-ad-unit="DAN-GjqcYSn9Mk2jXqiL"
+          data-ad-width="300"
+          data-ad-height="250"></ins>
+        <Script id="kakao-ad" strategy="afterInteractive" src="//t1.daumcdn.net/kas/static/ba.min.js" async />
+      </body>
     </html>
   )
 }
