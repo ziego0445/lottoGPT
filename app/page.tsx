@@ -541,6 +541,31 @@ export default function Home() {
     );
   };
 
+  // 공유 텍스트 생성 함수 추가
+  const generateShareText = (prediction: PredictionHistoryItem) => {
+    const sets = prediction.numbers.map((set, index) => 
+      `${index + 1}세트: ${set.join(', ')}`
+    ).join('\n');
+
+    return `🎯 LottoGPT AI가 예측한 로또번호\n\n${sets}\n\n` + 
+      `🤖 최첨단 AI가 ${prediction.trainingSize}회차의 데이터를 분석하여 예측한 번호입니다.\n` +
+      `✨ 당신의 행운을 기원합니다!\n\n` +
+      `🌐 LottoGPT: https://lottogpt.vercel.app`;
+  };
+
+  // 공유하기 함수 추가
+  const handleShare = async (prediction: PredictionHistoryItem) => {
+    const shareText = generateShareText(prediction);
+    
+    try {
+      await navigator.clipboard.writeText(shareText);
+      alert('예측번호가 클립보드에 복사되었습니다!');
+    } catch (error) {
+      console.error('클립보드 복사 실패:', error);
+      alert('클립보드 복사에 실패했습니다. 수동으로 복사해주세요.');
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 py-12 px-4 sm:px-6 lg:px-8 text-white">
       {/* 카카오 광고 추가 */}
@@ -732,9 +757,31 @@ export default function Home() {
                   >
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-sm text-blue-300">{history.date}</span>
-                      <span className="text-sm font-medium text-purple-300">
-                        학습 데이터: {history.trainingSize}회차
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-purple-300">
+                          학습 데이터: {history.trainingSize}회차
+                        </span>
+                        <button
+                          onClick={() => handleShare(history)}
+                          className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors duration-200 flex items-center gap-1.5 text-sm"
+                        >
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            className="h-4 w-4" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" 
+                            />
+                          </svg>
+                          공유하기
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-3">
                       {history.numbers.map((set, setIndex) => (
