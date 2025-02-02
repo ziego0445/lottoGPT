@@ -68,6 +68,11 @@ interface LottoStats {
     range30_39: number;
     range40_45: number;
   };
+  duplicateWinnings: {
+    numbers: number[];
+    count: number;
+    rounds: number[];  // 회차 정보 추가
+  }[];
 }
 
 export default function Home() {
@@ -78,7 +83,10 @@ export default function Home() {
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
   const [predictionHistory, setPredictionHistory] = useState<PredictionHistoryItem[]>([]);
   const [lottoStats, setLottoStats] = useState<LottoStats | null>(null);
-  const [maxTrainingSize, setMaxTrainingSize] = useState<number>(50);
+  const [maxTrainingSize, setMaxTrainingSize] = useState<number>(30);
+  const [cachedRangeData, setCachedRangeData] = useState<{
+    [key: string]: LottoHistory[]
+  }>({});
 
   useEffect(() => {
     loadLottoHistory()
@@ -285,29 +293,85 @@ export default function Home() {
     return models
   }
 
+  // 필터링된 데이터 캐싱 함수
+  const getFilteredData = (min: number, max: number) => {
+    const key = `${min}-${max}`;
+    if (!cachedRangeData[key]) {
+      const filtered = historicalData.filter(history => 
+        history.numbers.some(num => num >= min && num <= max)
+      );
+      setCachedRangeData(prev => ({ ...prev, [key]: filtered }));
+      return filtered;
+    }
+    return cachedRangeData[key];
+  };
+
+  // generateNumbers 함수 최적화
   const generateNumbers = async () => {
     try {
       setProgress({
         stage: '번호 생성',
         current: 0,
         total: 100,
-        detail: '1번째 세트 준비 중...'
+        detail: '데이터 준비 중...'
       });
-      
+
       const newNumbers: number[][] = [];
       let totalTrainingSize = 0;
-      const predictionId = Date.now(); // 모든 세트가 같은 예측 ID를 공유
+      const predictionId = Date.now();
+
+      // 모든 범위의 데이터를 미리 필터링
+      const rangeData = {
+        range1_9: getFilteredData(1, 9),
+        range10_19: getFilteredData(10, 19),
+        range20_29: getFilteredData(20, 29),
+        range30_39: getFilteredData(30, 39),
+        range40_45: getFilteredData(40, 45)
+      };
+
+      // 랜덤 데이터 추출 함수 최적화
+      const getRandomData = (data: LottoHistory[], size: number) => {
+        const shuffled = data.slice(0, Math.min(size * 2, data.length))
+          .sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, Math.min(size, data.length));
+      };
 
       for (let set = 0; set < 5; set++) {
-        const randomSize = Math.floor(Math.random() * (maxTrainingSize - 30 + 1)) + 30;
-        totalTrainingSize += randomSize;
+        setProgress({
+          stage: '번호 생성',
+          current: set * 20,
+          total: 100,
+          detail: `${set + 1}번째 세트 생성 중...`
+        });
 
-        const startIdx = Math.floor(Math.random() * (historicalData.length - randomSize));
-        const trainingData = historicalData.slice(startIdx, startIdx + randomSize);
-        
-        const models = await trainLogisticRegressionForSet(trainingData, set + 1);
+        // 각 범위별 크기 계산
+        const sizes = {
+          range1_9: Math.floor(Math.random() * (maxTrainingSize - 30 + 1)) + 30,
+          range10_19: Math.floor(Math.random() * (maxTrainingSize - 30 + 1)) + 30,
+          range20_29: Math.floor(Math.random() * (maxTrainingSize - 30 + 1)) + 30,
+          range30_39: Math.floor(Math.random() * (maxTrainingSize - 30 + 1)) + 30,
+          range40_45: Math.floor(Math.random() * (maxTrainingSize - 30 + 1)) + 30
+        };
 
-        const lastGame = trainingData[0];
+        // 병렬로 데이터 추출
+        const trainingData = await Promise.all([
+          getRandomData(rangeData.range1_9, sizes.range1_9),
+          getRandomData(rangeData.range10_19, sizes.range10_19),
+          getRandomData(rangeData.range20_29, sizes.range20_29),
+          getRandomData(rangeData.range30_39, sizes.range30_39),
+          getRandomData(rangeData.range40_45, sizes.range40_45)
+        ]).then(results => results.flat());
+
+        // 중복 제거 최적화
+        const uniqueTrainingData = Array.from(
+          new Map(trainingData.map(item => [JSON.stringify(item), item])).values()
+        );
+
+        totalTrainingSize += uniqueTrainingData.length;
+
+        const models = await trainLogisticRegressionForSet(uniqueTrainingData, set + 1);
+
+        const lastGame = uniqueTrainingData[0];
         const features = new Array(45).fill(0);
         lastGame.numbers.forEach(num => features[num - 1] = 1);
 
@@ -325,16 +389,13 @@ export default function Home() {
         const currentPrediction: PredictionHistoryItem = {
           id: predictionId,
           date: new Date().toLocaleString('ko-KR'),
-          numbers: newNumbers.slice(), // 현재까지의 모든 세트 복사
-          trainingSize: Math.floor(totalTrainingSize / (set + 1)) // 현재까지의 평균 학습 크기
+          numbers: newNumbers.slice(),
+          trainingSize: Math.floor(totalTrainingSize / (set + 1))
         };
 
-        // 이전 예측을 제거하고 새로운 예측으로 업데이트
         setPredictionHistory(prev => {
           const filtered = prev.filter(p => p.id !== predictionId);
-          const newHistory = [currentPrediction, ...filtered].slice(0, 5); // 최대 5개만 유지
-          localStorage.setItem('predictionHistory', JSON.stringify(newHistory));
-          return newHistory;
+          return [currentPrediction, ...filtered];
         });
 
         if (set < 4) {
@@ -413,6 +474,29 @@ export default function Home() {
       });
     });
 
+    // 중복 당첨번호 확인
+    const numberSetsMap = new Map<string, { count: number; rounds: number[] }>();
+    data.forEach((history) => {
+      const sortedNumbers = [...history.numbers].sort((a, b) => a - b);
+      const key = sortedNumbers.join(',');
+      if (numberSetsMap.has(key)) {
+        const existing = numberSetsMap.get(key)!;
+        existing.count++;
+        existing.rounds.push(history.round);
+      } else {
+        numberSetsMap.set(key, { count: 1, rounds: [history.round] });
+      }
+    });
+
+    const duplicateWinnings = Array.from(numberSetsMap.entries())
+      .filter(([_, value]) => value.count > 1)
+      .map(([numbers, value]) => ({
+        numbers: numbers.split(',').map(Number),
+        count: value.count,
+        rounds: value.rounds
+      }))
+      .sort((a, b) => b.count - a.count);
+
     setLottoStats({
       frequency,
       oddEvenRatio: {
@@ -432,7 +516,8 @@ export default function Home() {
         range30_39: 0,
         range40_45: 0
       },
-      longTermTrends: longTermTrends
+      longTermTrends: longTermTrends,
+      duplicateWinnings
     });
   };
 
@@ -446,6 +531,14 @@ export default function Home() {
   const clearPredictionHistory = () => {
     setPredictionHistory([]);
     localStorage.removeItem('predictionHistory');
+  };
+
+  // 예측번호와 기존 당첨번호 비교 함수 추가
+  const checkPredictionMatch = (numbers: number[]) => {
+    const sortedNumbers = [...numbers].sort((a, b) => a - b).join(',');
+    return historicalData.find(history => 
+      [...history.numbers].sort((a, b) => a - b).join(',') === sortedNumbers
+    );
   };
 
   return (
@@ -548,7 +641,7 @@ export default function Home() {
               <h3 className="text-lg font-semibold text-blue-300 mb-2">{progress.stage}</h3>
               <p className="text-sm text-blue-200 mb-2">{progress.detail}</p>
               
-              {/* 로딩 애니메이션 수정 */}
+              {/* 로딩 애니메이션 */}
               <div className="flex justify-center mb-4">
                 <div className="flex gap-2">
                   {[...Array(6)].map((_, index) => {
@@ -651,26 +744,37 @@ export default function Home() {
                         >
                           <span className="text-sm font-medium text-blue-300 mb-2">SET {setIndex + 1}</span>
                           <div className="flex flex-wrap gap-2 justify-center w-full">
-                            {set.map((num) => (
-                              <motion.span
-                                key={num}
-                                className={`inline-flex items-center justify-center w-11 h-11 rounded-full text-base font-bold ${
-                                  num <= 10
-                                    ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
-                                    : num <= 20
-                                      ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white"
-                                      : num <= 30
-                                        ? "bg-gradient-to-r from-red-400 to-red-600 text-white"
-                                        : num <= 40
-                                          ? "bg-gradient-to-r from-green-400 to-green-600 text-white"
-                                          : "bg-gradient-to-r from-purple-400 to-purple-600 text-white"
-                                }`}
-                                whileHover={{ scale: 1.1 }}
-                                transition={{ type: "spring", stiffness: 300 }}
-                              >
-                                {num}
-                              </motion.span>
-                            ))}
+                            {set.map((num) => {
+                              const matchedHistory = checkPredictionMatch(set);
+                              return (
+                                <div key={num} className="relative flex flex-col items-center">
+                                  {matchedHistory && num === set[0] && (
+                                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-yellow-500/20 rounded-md">
+                                      <span className="text-xs text-yellow-400 whitespace-nowrap font-medium">
+                                        {matchedHistory.round}회차 당첨번호와 동일
+                                      </span>
+                                    </div>
+                                  )}
+                                  <motion.span
+                                    className={`inline-flex items-center justify-center w-11 h-11 rounded-full text-base font-bold ${
+                                      num <= 10
+                                        ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
+                                        : num <= 20
+                                          ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white"
+                                          : num <= 30
+                                            ? "bg-gradient-to-r from-red-400 to-red-600 text-white"
+                                            : num <= 40
+                                              ? "bg-gradient-to-r from-green-400 to-green-600 text-white"
+                                              : "bg-gradient-to-r from-purple-400 to-purple-600 text-white"
+                                    }`}
+                                    whileHover={{ scale: 1.1 }}
+                                    transition={{ type: "spring", stiffness: 300 }}
+                                  >
+                                    {num}
+                                  </motion.span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
@@ -899,6 +1003,45 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* 중복 당첨번호 표시 */}
+            {lottoStats.duplicateWinnings.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold text-blue-200 mb-4">중복 당첨번호 이력</h3>
+                <div className="space-y-4 bg-white bg-opacity-5 rounded-xl p-4">
+                  {lottoStats.duplicateWinnings.map((item, index) => (
+                    <div key={index} className="p-4 bg-white bg-opacity-5 rounded-lg">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {item.numbers.map((num) => (
+                          <span
+                            key={num}
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+                              num <= 10
+                                ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
+                                : num <= 20
+                                  ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white"
+                                  : num <= 30
+                                    ? "bg-gradient-to-r from-red-400 to-red-600 text-white"
+                                    : num <= 40
+                                      ? "bg-gradient-to-r from-green-400 to-green-600 text-white"
+                                      : "bg-gradient-to-r from-purple-400 to-purple-600 text-white"
+                            }`}
+                          >
+                            {num}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-sm text-blue-300">
+                        <span className="font-semibold">{item.count}회 당첨</span>
+                        <span className="ml-2 text-blue-200/80">
+                          ({item.rounds.join(', ')}회차)
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
