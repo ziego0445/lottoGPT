@@ -755,15 +755,16 @@ export default function Home() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <div className="flex justify-between items-center mb-3">
+                    {/* 날짜와 학습 데이터 정보를 세로로 배치 */}
+                    <div className="flex flex-col gap-2 mb-3">
                       <span className="text-sm text-blue-300">{history.date}</span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2">
                         <span className="text-sm font-medium text-purple-300">
                           학습 데이터: {history.trainingSize}회차
                         </span>
                         <button
                           onClick={() => handleShare(history)}
-                          className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors duration-200 flex items-center gap-1.5 text-sm"
+                          className="self-start px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors duration-200 flex items-center gap-1.5 text-sm"
                         >
                           <svg 
                             xmlns="http://www.w3.org/2000/svg" 
@@ -785,43 +786,38 @@ export default function Home() {
                     </div>
                     <div className="space-y-3">
                       {history.numbers.map((set, setIndex) => (
-                        <div
-                          key={setIndex}
-                          className="flex flex-col p-3 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg"
-                        >
-                          <span className="text-sm font-medium text-blue-300 mb-2">SET {setIndex + 1}</span>
-                          <div className="flex flex-wrap gap-2 justify-center w-full">
-                            {set.map((num) => {
-                              const matchedHistory = checkPredictionMatch(set);
-                              return (
-                                <div key={num} className="relative flex flex-col items-center">
-                                  {matchedHistory && num === set[0] && (
-                                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-yellow-500/20 rounded-md">
-                                      <span className="text-xs text-yellow-400 whitespace-nowrap font-medium">
-                                        {matchedHistory.round}회차 당첨번호와 동일
-                                      </span>
-                                    </div>
-                                  )}
-                                  <motion.span
-                                    className={`inline-flex items-center justify-center w-11 h-11 rounded-full text-base font-bold ${
-                                      num <= 10
-                                        ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
-                                        : num <= 20
-                                          ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white"
-                                          : num <= 30
-                                            ? "bg-gradient-to-r from-red-400 to-red-600 text-white"
-                                            : num <= 40
-                                              ? "bg-gradient-to-r from-green-400 to-green-600 text-white"
-                                              : "bg-gradient-to-r from-purple-400 to-purple-600 text-white"
-                                    }`}
-                                    whileHover={{ scale: 1.1 }}
-                                    transition={{ type: "spring", stiffness: 300 }}
-                                  >
-                                    {num}
-                                  </motion.span>
-                                </div>
-                              );
-                            })}
+                        <div key={setIndex} className="flex flex-col p-3 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg">
+                          <div className="flex flex-col gap-2">
+                            <span className="text-sm font-medium text-blue-300">SET {setIndex + 1}</span>
+                            {/* 당첨번호 일치 시 메시지를 SET 라벨 아래에 표시 */}
+                            {checkPredictionMatch(set) && (
+                              <span className="text-xs text-yellow-400 font-medium">
+                                {checkPredictionMatch(set)?.round}회차 당첨번호와 동일
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2 justify-center w-full mt-2">
+                            {set.map((num) => (
+                              <div key={num} className="relative flex flex-col items-center">
+                                <motion.span
+                                  className={`inline-flex items-center justify-center w-11 h-11 rounded-full text-base font-bold ${
+                                    num <= 10
+                                      ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
+                                      : num <= 20
+                                        ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white"
+                                        : num <= 30
+                                          ? "bg-gradient-to-r from-red-400 to-red-600 text-white"
+                                          : num <= 40
+                                            ? "bg-gradient-to-r from-green-400 to-green-600 text-white"
+                                            : "bg-gradient-to-r from-purple-400 to-purple-600 text-white"
+                                  }`}
+                                  whileHover={{ scale: 1.1 }}
+                                  transition={{ type: "spring", stiffness: 300 }}
+                                >
+                                  {num}
+                                </motion.span>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       ))}
