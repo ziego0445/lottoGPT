@@ -550,7 +550,7 @@ export default function Home() {
     return `🎯 LottoGPT AI가 예측한 로또번호\n\n${sets}\n\n` + 
       `🤖 최첨단 AI가 ${prediction.trainingSize}회차의 데이터를 분석하여 예측한 번호입니다.\n` +
       `✨ 당신의 행운을 기원합니다!\n\n` +
-      `🌐 LottoGPT: https://lottogpt.vercel.app`;
+      `🌐 LottoGPT: https://lottogpt.netlify.app`;
   };
 
   // 공유하기 함수 추가
