@@ -73,6 +73,13 @@ interface LottoStats {
     count: number;
     rounds: number[];  // 회차 정보 추가
   }[];
+  duplicatePatterns: DuplicatePattern[];
+}
+
+interface DuplicatePattern {
+  numbers: number[];
+  count: number;
+  rounds: number[];
 }
 
 export default function Home() {
@@ -497,6 +504,40 @@ export default function Home() {
       }))
       .sort((a, b) => b.count - a.count);
 
+    // 중복 패턴 분석
+    const patternMap = new Map<string, { count: number; rounds: number[] }>();
+    
+    data.forEach((history, idx) => {
+      // 현재 회차의 모든 가능한 3개 숫자 조합 생성
+      for (let i = 0; i < history.numbers.length - 2; i++) {
+        for (let j = i + 1; j < history.numbers.length - 1; j++) {
+          for (let k = j + 1; k < history.numbers.length; k++) {
+            const pattern = [history.numbers[i], history.numbers[j], history.numbers[k]].sort((a, b) => a - b);
+            const key = pattern.join(',');
+            
+            if (!patternMap.has(key)) {
+              patternMap.set(key, { count: 1, rounds: [history.round] });
+            } else {
+              const existing = patternMap.get(key)!;
+              existing.count++;
+              existing.rounds.push(history.round);
+            }
+          }
+        }
+      }
+    });
+
+    // 2회 이상 나온 패턴만 필터링하고 정렬
+    const duplicatePatterns = Array.from(patternMap.entries())
+      .filter(([_, value]) => value.count > 1)
+      .map(([numbers, value]) => ({
+        numbers: numbers.split(',').map(Number),
+        count: value.count,
+        rounds: value.rounds
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10); // 상위 10개만 표시
+
     setLottoStats({
       frequency,
       oddEvenRatio: {
@@ -517,7 +558,8 @@ export default function Home() {
         range40_45: 0
       },
       longTermTrends: longTermTrends,
-      duplicateWinnings
+      duplicateWinnings,
+      duplicatePatterns
     });
   };
 
@@ -839,8 +881,50 @@ export default function Home() {
         >
           <div className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl p-8">
             <h2 className="text-3xl font-bold text-blue-300 mb-6">당첨 번호 통계</h2>
-            
-            {/* 빈도수 차트 수정 */}
+
+            {/* 자주 등장하는 번호 패턴을 최상단으로 이동 */}
+            {lottoStats.duplicatePatterns.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold text-blue-200 mb-4">자주 등장하는 번호 패턴</h3>
+                <div className="space-y-4 bg-white bg-opacity-5 rounded-xl p-4">
+                  {lottoStats.duplicatePatterns.map((pattern, index) => (
+                    <div key={index} className="p-4 bg-white bg-opacity-5 rounded-lg">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {pattern.numbers.map((num) => (
+                          <span
+                            key={num}
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+                              num <= 10
+                                ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
+                                : num <= 20
+                                  ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white"
+                                  : num <= 30
+                                    ? "bg-gradient-to-r from-red-400 to-red-600 text-white"
+                                    : num <= 40
+                                      ? "bg-gradient-to-r from-green-400 to-green-600 text-white"
+                                      : "bg-gradient-to-r from-purple-400 to-purple-600 text-white"
+                            }`}
+                          >
+                            {num}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-sm text-blue-300">
+                        <span className="font-semibold">{pattern.count}회 등장</span>
+                        <span className="ml-2 text-blue-200/80">
+                          (최근: {pattern.rounds.slice(-3).reverse().join(', ')}회차)
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="text-xs text-blue-300/80 mt-2 text-center">
+                    * 3개 숫자 조합 기준, 가장 자주 등장한 상위 10개 패턴
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 기존 번호별 출현 빈도 그래프 */}
             <div className="mb-8">
               <h3 className="text-xl font-semibold text-blue-200 mb-4">번호별 출현 빈도 그래프</h3>
               <div className="w-full h-[300px] bg-white bg-opacity-5 rounded-xl p-4">
