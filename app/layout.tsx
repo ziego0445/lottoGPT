@@ -1,12 +1,20 @@
 import type { Metadata } from "next"
-import { Orbitron } from "next/font/google"
+import { Noto_Sans_KR, Orbitron } from "next/font/google"
 import "./globals.css"
 import type React from "react"
 import Script from 'next/script';
 
+// 로고 전용 폰트 (font-brand). 숫자/한글 가독성을 위해 본문은 Noto Sans KR 사용
 const orbitron = Orbitron({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-orbitron",
+})
+
+const notoSansKr = Noto_Sans_KR({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
   display: "swap",
 })
 
@@ -25,7 +33,7 @@ export default function RootLayout({
       <head>
         <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4859745494345842" crossOrigin="anonymous" />
       </head>
-      <body className={orbitron.className}>
+      <body className={`${notoSansKr.className} ${orbitron.variable}`}>
         {children}
         <ins className="kakao_ad_area" style={{ display: 'none' }}
           data-ad-unit="DAN-GjqcYSn9Mk2jXqiL"
