@@ -32,6 +32,9 @@ const BALL_REVEAL_DELAY_MS = 120;
 const SET_PAUSE_MS = 250;
 const DONE_DELAY_MS = 600;
 
+const DHLOTTERY_URL = 'https://www.dhlottery.co.kr/';
+const DHLOTTERY_RESULT_URL = 'https://www.dhlottery.co.kr/lt645/result';
+
 const GENERATION_STAGES = [
   { stage: '데이터 준비', label: '데이터 준비' },
   { stage: '학습', label: 'AI 학습' },
@@ -331,6 +334,16 @@ export default function Home() {
               "번호 생성하기"
             )}
           </button>
+
+          <a
+            href={DHLOTTERY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 text-blue-100 text-sm font-medium transition-colors duration-200"
+          >
+            동행복권 바로가기
+            <ExternalLinkIcon />
+          </a>
 
           {progress && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
@@ -822,7 +835,25 @@ function WinningSummary({ targetRound, draw, sets }: {
           {draw.bonus}
         </span>
       </div>
+      <a
+        href={DHLOTTERY_RESULT_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="self-start flex items-center gap-1 text-xs text-blue-200/80 hover:text-white underline-offset-2 hover:underline"
+      >
+        동행복권에서 결과 보기
+        <ExternalLinkIcon />
+      </a>
     </div>
+  );
+}
+
+// 외부 링크(새 창) 표시 아이콘
+function ExternalLinkIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
   );
 }
 
