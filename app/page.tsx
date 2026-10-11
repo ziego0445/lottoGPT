@@ -2,7 +2,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import styles from './page.module.css'
-import * as XLSX from 'xlsx'
 import * as math from 'mathjs'
 import { v4 as uuidv4 } from "uuid"
 import { motion, AnimatePresence } from "framer-motion"
@@ -20,18 +19,6 @@ interface LottoHistory {
 interface LogisticRegressionModel {
   weights: number[];
   bias: number;
-}
-
-interface LottoRow {
-  회차: number;
-  날짜: string;
-  '1': number;
-  '2': number;
-  '3': number;
-  '4': number;
-  '5': number;
-  '6': number;
-  보너스: number;
 }
 
 interface GenerationProgress {
@@ -127,40 +114,25 @@ export default function Home() {
 
   const loadLottoHistory = async () => {
     try {
-      const response = await fetch('/lotto.xlsx')
-      const arrayBuffer = await response.arrayBuffer()
-      const workbook = XLSX.read(arrayBuffer)
-      
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
+      // scripts/update-lotto.mjs 가 매주 갱신하는 데이터 (최신 회차가 앞쪽)
+      const response = await fetch('/lotto.json', { cache: 'no-cache' })
+      if (!response.ok) {
+        console.error('로또 데이터를 불러올 수 없습니다:', response.status)
+        return
+      }
+      const jsonData: unknown = await response.json()
 
-      if (!jsonData || jsonData.length === 0) {
-        console.error('엑셀 파일에서 데이터를 읽을 수 없습니다.')
+      if (!Array.isArray(jsonData)) {
+        console.error('로또 데이터 형식이 올바르지 않습니다.')
         return
       }
 
-      const formattedData = jsonData.map((row: unknown) => {
-        const lottoRow = row as LottoRow;
-        if (!lottoRow['회차'] || !lottoRow['날짜'] || !lottoRow['1'] || !lottoRow['2'] || !lottoRow['3'] || 
-            !lottoRow['4'] || !lottoRow['5'] || !lottoRow['6'] || !lottoRow['보너스']) {
-          console.error('잘못된 데이터 형식:', lottoRow)
-          return null
-        }
-
-        return {
-          round: lottoRow['회차'],
-          date: lottoRow['날짜'],
-          numbers: [
-            lottoRow['1'],
-            lottoRow['2'],
-            lottoRow['3'],
-            lottoRow['4'],
-            lottoRow['5'],
-            lottoRow['6']
-          ],
-          bonus: lottoRow['보너스']
-        }
-      }).filter(item => item !== null)
+      const formattedData = jsonData.filter((item): item is LottoHistory => {
+        const valid = typeof item?.round === 'number' && typeof item?.date === 'string' &&
+          Array.isArray(item?.numbers) && item.numbers.length === 6 && typeof item?.bonus === 'number'
+        if (!valid) console.error('잘못된 데이터 형식:', item)
+        return valid
+      })
 
       if (formattedData.length === 0) {
         console.error('유효한 데이터가 없습니다.')
@@ -639,8 +611,13 @@ export default function Home() {
         <p className="text-xl text-center text-blue-200 mb-2 whitespace-nowrap">
           AI 기반 로또 번호 생성기
         </p>
-        <p className="text-sm text-center text-blue-300/80 mb-12 whitespace-normal">
+        <p className="text-sm text-center text-blue-300/80 mb-2 whitespace-normal">
           최근 500회의 당첨번호를 기반으로 학습하여 최적의 로또번호를 예측합니다.
+        </p>
+        <p className="text-xs text-center text-blue-300/60 mb-12 whitespace-normal">
+          {historicalData.length > 0
+            ? `최신 데이터: ${historicalData[0].round}회 (${historicalData[0].date} 추첨)`
+            : ' '}
         </p>
 
         <motion.div
