@@ -19,6 +19,7 @@ import {
   toNumberKey,
   trainModels,
 } from '@/lib/lotto'
+import PurchaseHelper, { type PurchaseSource } from '@/components/purchase-helper'
 
 const SET_COUNT = 5;
 const MAX_SAVED_HISTORY = 10; // 몇 주 뒤에도 당첨 확인을 할 수 있도록 넉넉히 보관
@@ -64,6 +65,7 @@ export default function Home() {
   const [predictionHistory, setPredictionHistory] = useState<PredictionHistoryItem[]>([]);
   const [lottoStats, setLottoStats] = useState<LottoStats | null>(null);
   const [maxTrainingSize, setMaxTrainingSize] = useState<number>(30);
+  const [purchaseTarget, setPurchaseTarget] = useState<PredictionHistoryItem | null>(null);
 
   useEffect(() => {
     loadLottoHistory()
@@ -448,9 +450,16 @@ export default function Home() {
                             학습 데이터: {history.trainingSize}회차
                           </span>
                         </div>
+                        <div className="shrink-0 flex flex-col sm:flex-row gap-1.5">
+                        <button
+                          onClick={() => setPurchaseTarget(history)}
+                          className="px-3 py-1.5 bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-200 rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 text-sm whitespace-nowrap"
+                        >
+                          🛒 구매 도우미
+                        </button>
                         <button
                           onClick={() => handleShare(history)}
-                          className="shrink-0 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors duration-200 flex items-center gap-1.5 text-sm"
+                          className="justify-center px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors duration-200 flex items-center gap-1.5 text-sm"
                         >
                           <svg 
                             xmlns="http://www.w3.org/2000/svg" 
@@ -468,57 +477,20 @@ export default function Home() {
                           </svg>
                           공유하기
                         </button>
+                        </div>
                       </div>
                       <WinningSummary targetRound={getTargetRound(history.id)} draw={drawByRound.get(getTargetRound(history.id))} sets={history.numbers} />
                     </div>
                     <div className="space-y-3">
-                      {history.numbers.map((set, setIndex) => {
-                        const targetDraw = drawByRound.get(getTargetRound(history.id));
-                        const result = targetDraw ? checkWinning(set, targetDraw) : null;
-                        return (
-                        <div key={setIndex} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2.5 sm:p-3 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg">
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-blue-300">SET {setIndex + 1}</span>
-                              {result && (
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                                  result.rank ? 'bg-yellow-400 text-yellow-900' : 'bg-white/10 text-blue-200/80'
-                                }`}>
-                                  {result.rank ? `${result.rank}등 당첨` : `낙첨 (${result.matched.length}개 일치)`}
-                                </span>
-                              )}
-                            </div>
-                            {/* 당첨번호 일치 시 메시지를 SET 라벨 아래에 표시 */}
-                            {winningRoundByKey.has(toNumberKey(set)) && (
-                              <span className="text-xs text-yellow-400 font-medium">
-                                {winningRoundByKey.get(toNumberKey(set))}회차 당첨번호와 동일
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center sm:justify-end w-full sm:w-auto">
-                            {set.map((num) => {
-                              // 추첨 결과가 있으면 맞힌 번호는 강조, 나머지는 흐리게 표시
-                              const isMatched = result?.matched.includes(num);
-                              const isBonus = result?.rank === 2 && targetDraw?.bonus === num;
-                              return (
-                              <div key={num} className="relative flex flex-col items-center">
-                                <motion.span
-                                  className={`inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full text-sm sm:text-base font-bold ${getBallClass(num)} ${
-                                    result && !isMatched && !isBonus ? 'opacity-30' : ''
-                                  } ${isMatched || isBonus ? 'ring-2 ring-white ring-offset-2 ring-offset-transparent' : ''}`}
-                                  whileHover={{ scale: 1.1 }}
-                                  transition={{ type: "spring", stiffness: 300 }}
-                                >
-                                  {num}
-                                </motion.span>
-                                {isBonus && <span className="text-[10px] text-yellow-300 mt-1">보너스</span>}
-                              </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        );
-                      })}
+                      {history.numbers.map((set, setIndex) => (
+                        <PredictionSetRow
+                          key={setIndex}
+                          label={`SET ${setIndex + 1}`}
+                          set={set}
+                          targetDraw={drawByRound.get(getTargetRound(history.id))}
+                          sameAsRound={winningRoundByKey.get(toNumberKey(set))}
+                        />
+                      ))}
                     </div>
                   </motion.div>
                 ))}
@@ -793,6 +765,14 @@ export default function Home() {
         </motion.div>
       )}
 
+      {purchaseTarget && (
+        <PurchaseHelper
+          round={getTargetRound(Date.now())}
+          sources={getPurchaseSources(purchaseTarget)}
+          onClose={() => setPurchaseTarget(null)}
+        />
+      )}
+
       <footer className="text-center text-sm text-gray-400 mt-8">
         © {new Date().getFullYear()} LottoGPT 본 서비스는 참고용이며, 실제 당첨을 보장하지 않습니다.
       </footer>
@@ -935,5 +915,62 @@ function ExtractionPanel({ detail, sets }: { detail?: string; sets: number[][] }
         ))}
       </div>
     </motion.div>
+  );
+}
+
+// 구매 도우미에 넘길 번호 목록
+function getPurchaseSources(prediction: PredictionHistoryItem): PurchaseSource[] {
+  return [
+    { name: 'AI 번호', sets: prediction.numbers.map((numbers, i) => ({ label: `SET ${i + 1}`, numbers })) },
+  ];
+}
+
+// 예측 세트 한 줄. 추첨 결과가 있으면 등수와 맞힌 번호를 표시한다.
+function PredictionSetRow({ label, set, targetDraw, sameAsRound }: {
+  label: string;
+  set: number[];
+  targetDraw?: LottoHistory;
+  sameAsRound?: number;        // 과거 당첨번호와 완전히 같은 경우 그 회차
+}) {
+  const result = targetDraw ? checkWinning(set, targetDraw) : null;
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2.5 sm:p-3 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-blue-300 whitespace-nowrap">{label}</span>
+          {result && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+              result.rank ? 'bg-yellow-400 text-yellow-900' : 'bg-white/10 text-blue-200/80'
+            }`}>
+              {result.rank ? `${result.rank}등 당첨` : `낙첨 (${result.matched.length}개 일치)`}
+            </span>
+          )}
+        </div>
+        {sameAsRound && (
+          <span className="text-xs text-yellow-400 font-medium">{sameAsRound}회차 당첨번호와 동일</span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center sm:justify-end w-full sm:w-auto">
+        {set.map((num) => {
+          // 추첨 결과가 있으면 맞힌 번호는 강조, 나머지는 흐리게 표시
+          const isMatched = result?.matched.includes(num);
+          const isBonus = result?.rank === 2 && targetDraw?.bonus === num;
+          return (
+            <div key={num} className="relative flex flex-col items-center">
+              <motion.span
+                className={`inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full text-sm sm:text-base font-bold ${getBallClass(num)} ${
+                  result && !isMatched && !isBonus ? 'opacity-30' : ''
+                } ${isMatched || isBonus ? 'ring-2 ring-white ring-offset-2 ring-offset-transparent' : ''}`}
+                whileHover={{ scale: 1.1 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                {num}
+              </motion.span>
+              {isBonus && <span className="text-[10px] text-yellow-300 mt-1">보너스</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
